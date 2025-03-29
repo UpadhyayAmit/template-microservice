@@ -1,35 +1,61 @@
-import { useState } from 'react'
-import reactLogo from './assets/react.svg'
-import viteLogo from '/vite.svg'
-import './App.css'
+import { useState } from 'react';
+import './App.css';
+import { EventType } from '@azure/msal-browser';
+import { useIsAuthenticated, useMsal } from '@azure/msal-react';
+import React, { useEffect } from 'react';
+import { useDispatch } from 'react-redux';
+import { useNavigate, useRoutes } from 'react-router-dom';
+import { loginRequest } from './config/msalConfig';
+import routes from './shared/utils/routes';
+import { setAuth, setUserName } from './store/reducers/auth';
 
-function App() {
-  const [count, setCount] = useState(0)
-
-  return (
-    <>
-      <div>
-        <a href="https://vite.dev" target="_blank">
-          <img src={viteLogo} className="logo" alt="Vite logo" />
-        </a>
-        <a href="https://react.dev" target="_blank">
-          <img src={reactLogo} className="logo react" alt="React logo" />
-        </a>
-      </div>
-      <h1>Vite + React</h1>
-      <div className="card">
-        <button onClick={() => setCount((count) => count + 1)}>
-          count is {count}
-        </button>
-        <p>
-          Edit <code>src/App.jsx</code> and save to test HMR
-        </p>
-      </div>
-      <p className="read-the-docs">
-        Click on the Vite and React logos to learn more
-      </p>
-    </>
-  )
+function AppRouters() {
+  const elements = useRoutes(routes);
+  return elements;
 }
 
-export default App
+const App = () => {
+  const isAuthenticate = useIsAuthenticated();
+  const { instance } = useMsal();
+  const dispatch = useDispatch();
+  const navigate = useNavigate();
+
+  useEffect(() => {
+    if (isAuthenticate) {
+      const activeAcount = instance.getActiveAccount();
+      if (activeAcount) {
+        dispatch(setAuth(activeAcount));
+      }
+    }
+  }, [isAuthenticate]);
+
+  instance.addEventCallback(
+    (event) => {
+      if (event.eventType == EventType.LOGIN_SUCCESS && event.payload.account) {
+        const account = event.payload.account;
+        instance.setActiveAccount(account);
+      }
+    },
+    (error) => {}
+  );
+
+  instance.handleRedirectPromise().then(async (authResult) => {
+    const account = instance.getActiveAccount();
+    if (!account) {
+      await instance.loginRedirect(loginRequest);
+    }
+  });
+
+  const handleIdle = () => {
+    navigate('/session-expired');
+  };
+
+  return (
+    <Box>
+      <AppRouters />
+      <IdleTimeout timeout={1800000} onIdle={handleIdle} />
+    </Box>
+  );
+};
+
+export default App;

@@ -1,0 +1,35 @@
+syntax = "proto3";
+
+option csharp_namespace = "Template.Utility.Protos";
+
+package template;
+
+import "timestamp.proto";
+
+// Define a simple message
+message ClientSampleRequest {
+    string id  = 1;
+    string query_parameter = 2;
+    int32 limit  = 3;
+}
+
+// Define a response message
+message ClientSampleResponse {
+    string id  = 1;
+    string name  = 2;
+    google.protobuf.Timestamp created_at = 3;
+    google.protobuf.Timestamp updated_at = 4;
+    bool is_active = 5;
+    int32 status_code = 6;
+    int64 total = 7;
+}
+
+message ClientSampleResponseList {
+    repeated ClientSampleResponse items = 1;
+}
+
+
+// Define a service
+service ClientSampleService {
+    rpc GetClientSample (ClientSampleRequest) returns (ClientSampleResponseList);
+}

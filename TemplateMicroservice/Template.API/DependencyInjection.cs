@@ -4,6 +4,12 @@ using Microsoft.AspNetCore.Diagnostics.HealthChecks;
 using Microsoft.Extensions.Configuration;
 using Microsoft.OpenApi.Models;
 using Asp.Versioning;
+using Template.Infrastructure.Messaging.Kafka.Publisher;
+using Template.Infrastructure.Messaging.Kafka.Consumer;
+using Template.Utility.Protos;
+using Template.Application.GrpcServices;
+using Template.Utility;
+using Grpc.Net.Client;
 
 namespace Template.API;
 
@@ -28,6 +34,9 @@ public static class DependencyInjection
             options.DefaultApiVersion = new ApiVersion(1, 0);
         });
 
+
+ 
+
         services.AddControllers();
         services.AddCarter();
         services.AddSwaggerGen(c =>
@@ -37,6 +46,18 @@ public static class DependencyInjection
                 Title = "API Title",
                 Version = "v1"
             });
+        });
+
+
+        services.AddSingleton<ServiceDiscoveryHelper>();
+
+        //GRPC Client Registration.
+
+        services.AddSingleton<ClientSampleService.ClientSampleServiceClient>(services =>
+        {
+            var serviceDiscoveryHelper = services.GetRequiredService<ServiceDiscoveryHelper>();
+            var channel = GrpcChannel.ForAddress(serviceDiscoveryHelper.ResolveServiceEndpoint("ClientServiceData"));            
+            return new ClientSampleService.ClientSampleServiceClient(channel);
         });
 
         services.AddExceptionHandler<CustomExceptionHandler>();
@@ -66,6 +87,8 @@ public static class DependencyInjection
         app.UseRouting();
 
         app.UseCors("AllowAll");
+
+        app.MapGrpcService<GrpcServerSampleDataService>();
 
         app.MapCarter();
 
